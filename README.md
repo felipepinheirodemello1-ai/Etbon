@@ -1,429 +1,389 @@
--- MM2 SCRIPT SIMPLES E FUNCIONAL
 local Players = game:GetService("Players")
-local lp = Players.LocalPlayer
-local RunService = game:GetService("RunService")
-
--- Criar GUI
+local player = Players.LocalPlayer
 local gui = Instance.new("ScreenGui")
-gui.Parent = game.CoreGui
-gui.Name = "MM2Simple"
+gui.Name = "ExportadorEtbonito"
+gui.ResetOnSpawn = false
+gui.Parent = player:WaitForChild("PlayerGui")
 
--- Botão para abrir/fechar menu
-local toggleBtn = Instance.new("TextButton")
-toggleBtn.Size = UDim2.new(0, 120, 0, 40)
-toggleBtn.Position = UDim2.new(0, 10, 0, 10)
-toggleBtn.BackgroundColor3 = Color3.fromRGB(0, 100, 255)
-toggleBtn.TextColor3 = Color3.new(1, 1, 1)
-toggleBtn.Text = "🎯 ABRIR MENU"
-toggleBtn.Font = Enum.Font.GothamBold
-toggleBtn.TextSize = 14
-toggleBtn.Parent = gui
+-- Botão fixo para abrir a interface
+local abrirButton = Instance.new("ImageButton")
+abrirButton.Name = "AbrirEtbonito"
+abrirButton.Size = UDim2.new(0, 50, 0, 50)
+abrirButton.Position = UDim2.new(0, 10, 0, 10)
+abrirButton.Image = "rbxassetid://81739893945719"
+abrirButton.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
+abrirButton.Parent = gui
 
-local corner = Instance.new("UICorner")
-corner.CornerRadius = UDim.new(0, 8)
-corner.Parent = toggleBtn
+local abrirCorner = Instance.new("UICorner")
+abrirCorner.CornerRadius = UDim.new(0, 8)
+abrirCorner.Parent = abrirButton
 
--- Frame principal
-local mainFrame = Instance.new("Frame")
-mainFrame.Size = UDim2.new(0, 250, 0, 350)
-mainFrame.Position = UDim2.new(0, 10, 0, 60)
-mainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
-mainFrame.BackgroundTransparency = 0.1
-mainFrame.Active = true
-mainFrame.Draggable = true
-mainFrame.Visible = false
-mainFrame.Parent = gui
-
-local mainCorner = Instance.new("UICorner")
-mainCorner.CornerRadius = UDim.new(0, 12)
-mainCorner.Parent = mainFrame
-
-local mainStroke = Instance.new("UIStroke")
-mainStroke.Color = Color3.fromRGB(255, 255, 255)
-mainStroke.Thickness = 2
-mainStroke.Parent = mainFrame
-
--- Título
-local title = Instance.new("TextLabel")
-title.Size = UDim2.new(1, 0, 0, 40)
-title.Position = UDim2.new(0, 0, 0, 0)
-title.Text = "🎯 MM2 SCRIPT"
-title.TextColor3 = Color3.new(1, 1, 1)
-title.BackgroundColor3 = Color3.fromRGB(30, 30, 45)
-title.Font = Enum.Font.GothamBold
-title.TextSize = 16
-title.Parent = mainFrame
-
-local titleCorner = Instance.new("UICorner")
-titleCorner.CornerRadius = UDim.new(0, 12)
-titleCorner.Parent = title
-
--- Botão fechar
-local closeBtn = Instance.new("TextButton")
-closeBtn.Size = UDim2.new(0, 30, 0, 30)
-closeBtn.Position = UDim2.new(1, -35, 0, 5)
-closeBtn.Text = "✕"
-closeBtn.TextColor3 = Color3.new(1, 1, 1)
-closeBtn.BackgroundColor3 = Color3.fromRGB(255, 50, 50)
-closeBtn.Font = Enum.Font.GothamBold
-closeBtn.TextSize = 16
-closeBtn.Parent = title
-
-local closeCorner = Instance.new("UICorner")
-closeCorner.CornerRadius = UDim.new(1, 0)
-closeCorner.Parent = closeBtn
-
--- Container de botões
-local container = Instance.new("ScrollingFrame")
-container.Size = UDim2.new(1, -10, 1, -50)
-container.Position = UDim2.new(0, 5, 0, 45)
-container.BackgroundTransparency = 1
-container.ScrollBarThickness = 6
-container.CanvasSize = UDim2.new(0, 0, 0, 500)
-container.Parent = mainFrame
-
--- Estados
-local estados = {
-    radar = false,
-    speed = false,
-    esp = false,
-    noclip = false
-}
-
-local conexoes = {}
-
--- Função para criar botões
-local function criarBotao(texto, posicao, callback, cor)
-    local botao = Instance.new("TextButton")
-    botao.Size = UDim2.new(1, -10, 0, 35)
-    botao.Position = posicao
-    botao.Text = texto
-    botao.BackgroundColor3 = cor or Color3.fromRGB(50, 50, 70)
-    botao.TextColor3 = Color3.new(1, 1, 1)
-    botao.Font = Enum.Font.Gotham
-    botao.TextSize = 12
-    botao.Parent = container
-    
-    local botaoCorner = Instance.new("UICorner")
-    botaoCorner.CornerRadius = UDim.new(0, 8)
-    botaoCorner.Parent = botao
-    
-    botao.MouseButton1Click:Connect(callback)
-    return botao
-end
-
--- =============================================================================
--- SISTEMA DE RADAR (FUNCIONANDO)
--- =============================================================================
-
-local function getPlayerRole(player)
-    if not player.Character then return "😇 INOCENTE" end
-    
-    -- Verificar ferramentas equipadas
-    for _, item in pairs(player.Character:GetChildren()) do
-        if item:IsA("Tool") then
-            local nome = string.lower(item.Name)
-            if nome:find("knife") or nome:find("faca") then
-                return "🔪 ASSASSINO"
-            elseif nome:find("gun") or nome:find("revolver") then
-                return "👮 XERIFE"
-            end
-        end
+-- Função para verificar pasta etbonito
+local function verificarPastaEtbonito()
+    local pasta = workspace:FindFirstChild("etbonito")
+    if not pasta then
+        return false, "❌ Crie uma pasta 'etbonito' no workspace!"
     end
-    return "😇 INOCENTE"
+    return true, pasta
 end
 
-local function criarTag(player)
-    if not player.Character then return end
-    local head = player.Character:FindFirstChild("Head")
-    if not head then return end
+-- Função para exportar objetos
+local function exportarObjeto(obj, nivel)
+    local indentacao = string.rep("    ", nivel)
+    local codigo = ""
     
-    -- Remover tag antiga
-    local tagAntiga = head:FindFirstChild("RadarTag")
-    if tagAntiga then tagAntiga:Destroy() end
-    
-    local papel = getPlayerRole(player)
-    
-    local billboard = Instance.new("BillboardGui")
-    billboard.Name = "RadarTag"
-    billboard.Size = UDim2.new(0, 200, 0, 50)
-    billboard.Adornee = head
-    billboard.AlwaysOnTop = true
-    billboard.MaxDistance = 100
-    billboard.Parent = head
-    
-    local texto = Instance.new("TextLabel")
-    texto.Size = UDim2.new(1, 0, 1, 0)
-    texto.BackgroundTransparency = 1
-    texto.Text = player.Name .. "\n" .. papel
-    texto.TextColor3 = Color3.new(1, 1, 1)
-    texto.Font = Enum.Font.GothamBold
-    texto.TextSize = 12
-    texto.TextStrokeTransparency = 0
-    texto.Parent = billboard
-    
-    -- Cor baseada no papel
-    if papel == "🔪 ASSASSINO" then
-        texto.TextColor3 = Color3.fromRGB(255, 0, 0)
-    elseif papel == "👮 XERIFE" then
-        texto.TextColor3 = Color3.fromRGB(0, 100, 255)
+    if obj:IsA("Folder") then
+        codigo = codigo .. indentacao .. string.format('local %s = Instance.new("Folder")', obj.Name)
+        codigo = codigo .. "\n" .. indentacao .. string.format('%s.Name = "%s"', obj.Name, obj.Name)
+        
+        for _, filho in ipairs(obj:GetChildren()) do
+            codigo = codigo .. "\n\n" .. exportarObjeto(filho, nivel)
+        end
+        
+        codigo = codigo .. "\n" .. indentacao .. string.format('%s.Parent = %s', obj.Name, nivel == 0 and "etbonito" or "p")
+        
+    elseif obj:IsA("Part") then
+        codigo = codigo .. indentacao .. string.format('local %s = Instance.new("Part")', obj.Name)
+        codigo = codigo .. "\n" .. indentacao .. string.format('%s.Name = "%s"', obj.Name, obj.Name)
+        codigo = codigo .. "\n" .. indentacao .. string.format('%s.Size = Vector3.new(%s, %s, %s)', obj.Name, 
+            tostring(obj.Size.X), tostring(obj.Size.Y), tostring(obj.Size.Z))
+        codigo = codigo .. "\n" .. indentacao .. string.format('%s.Position = Vector3.new(%s, %s, %s)', obj.Name,
+            tostring(obj.Position.X), tostring(obj.Position.Y), tostring(obj.Position.Z))
+        codigo = codigo .. "\n" .. indentacao .. string.format('%s.Color = Color3.fromRGB(%d, %d, %d)', obj.Name,
+            math.floor(obj.Color.R * 255), math.floor(obj.Color.G * 255), math.floor(obj.Color.B * 255))
+        codigo = codigo .. "\n" .. indentacao .. string.format('%s.Material = Enum.Material.%s', obj.Name, obj.Material.Name)
+        codigo = codigo .. "\n" .. indentacao .. string.format('%s.Transparency = %s', obj.Name, tostring(obj.Transparency))
+        codigo = codigo .. "\n" .. indentacao .. string.format('%s.CanCollide = %s', obj.Name, tostring(obj.CanCollide))
+        codigo = codigo .. "\n" .. indentacao .. string.format('%s.Anchored = %s', obj.Name, tostring(obj.Anchored))
+        codigo = codigo .. "\n" .. indentacao .. string.format('%s.Parent = %s', obj.Name, nivel == 0 and "etbonito" or "p")
+        
+    elseif obj:IsA("Script") or obj:IsA("LocalScript") then
+        codigo = codigo .. indentacao .. string.format('local %s = Instance.new("%s")', obj.Name, obj.ClassName)
+        codigo = codigo .. "\n" .. indentacao .. string.format('%s.Name = "%s"', obj.Name, obj.Name)
+        codigo = codigo .. "\n" .. indentacao .. string.format('%s.Source = [[%s]]', obj.Name, obj.Source:gsub("]]", "] ]"))
+        codigo = codigo .. "\n" .. indentacao .. string.format('%s.Parent = p', obj.Name)
+        
+    elseif obj:IsA("SpecialMesh") then
+        codigo = codigo .. indentacao .. string.format('local %s = Instance.new("SpecialMesh")', obj.Name)
+        codigo = codigo .. "\n" .. indentacao .. string.format('%s.Name = "%s"', obj.Name, obj.Name)
+        codigo = codigo .. "\n" .. indentacao .. string.format('%s.MeshId = "%s"', obj.Name, obj.MeshId)
+        codigo = codigo .. "\n" .. indentacao .. string.format('%s.TextureId = "%s"', obj.Name, obj.TextureId)
+        codigo = codigo .. "\n" .. indentacao .. string.format('%s.Scale = Vector3.new(%s, %s, %s)', obj.Name,
+            tostring(obj.Scale.X), tostring(obj.Scale.Y), tostring(obj.Scale.Z))
+        codigo = codigo .. "\n" .. indentacao .. string.format('%s.Parent = p', obj.Name)
+        
     else
-        texto.TextColor3 = Color3.fromRGB(0, 255, 0)
+        codigo = codigo .. indentacao .. string.format('local %s = Instance.new("%s")', obj.Name, obj.ClassName)
+        codigo = codigo .. "\n" .. indentacao .. string.format('%s.Name = "%s"', obj.Name, obj.Name)
+        codigo = codigo .. "\n" .. indentacao .. string.format('%s.Parent = p', obj.Name)
     end
+    
+    return codigo
 end
 
-local function atualizarRadar()
-    for _, player in pairs(Players:GetPlayers()) do
-        if player ~= lp then
-            if estados.radar then
-                criarTag(player)
-            else
-                -- Remover tags
-                if player.Character then
-                    local head = player.Character:FindFirstChild("Head")
-                    if head then
-                        local tag = head:FindFirstChild("RadarTag")
-                        if tag then tag:Destroy() end
-                    end
-                end
-            end
-        end
+-- Função para exportar tudo
+local function exportarTudoEtbonito()
+    local sucesso, pasta = verificarPastaEtbonito()
+    if not sucesso then
+        return pasta
     end
+    
+    local codigo = "-- Exportação completa da pasta etbonito\n"
+    codigo = codigo .. "-- Gerado por Etbonito Exportador\n\n"
+    
+    codigo = codigo .. "local etbonito = Instance.new(\"Folder\")\n"
+    codigo = codigo .. "etbonito.Name = \"etbonito\"\n"
+    codigo = codigo .. "etbonito.Parent = workspace\n\n"
+    
+    for _, obj in ipairs(pasta:GetChildren()) do
+        codigo = codigo .. exportarObjeto(obj, 0) .. "\n\n"
+    end
+    
+    return codigo
 end
 
--- =============================================================================
--- SISTEMA ESP (HIGHLIGHT)
--- =============================================================================
-
-local highlights = {}
-
-local function toggleESP()
-    if estados.esp then
-        -- Criar highlights
-        for _, player in pairs(Players:GetPlayers()) do
-            if player ~= lp and player.Character then
-                local highlight = Instance.new("Highlight")
-                highlight.Parent = player.Character
-                highlight.FillTransparency = 0.5
-                highlight.Name = "ESPHighlight"
-                
-                local papel = getPlayerRole(player)
-                if papel == "🔪 ASSASSINO" then
-                    highlight.FillColor = Color3.fromRGB(255, 0, 0)
-                elseif papel == "👮 XERIFE" then
-                    highlight.FillColor = Color3.fromRGB(0, 0, 255)
-                else
-                    highlight.FillColor = Color3.fromRGB(0, 255, 0)
-                end
-                
-                highlights[player.Character] = highlight
-            end
-        end
-    else
-        -- Remover highlights
-        for character, highlight in pairs(highlights) do
-            if highlight then
-                highlight:Destroy()
-            end
-        end
-        highlights = {}
+-- Função para exportar scripts
+local function exportarScriptsEtbonito()
+    local sucesso, pasta = verificarPastaEtbonito()
+    if not sucesso then
+        return pasta
     end
+    
+    local codigo = "-- SCRIPTS da pasta etbonito\n"
+    codigo = codigo .. "-- Gerado por Etbonito Exportador\n\n"
+    
+    codigo = codigo .. "local etbonito = Instance.new(\"Folder\")\n"
+    codigo = codigo .. "etbonito.Name = \"etbonito\"\n"
+    codigo = codigo .. "etbonito.Parent = workspace\n\n"
+    
+    for _, obj in ipairs(pasta:GetDescendants()) do
+        if obj:IsA("Script") or obj:IsA("LocalScript") then
+            codigo = codigo .. string.format('-- Script: %s\n', obj.Name)
+            codigo = codigo .. string.format('local script = Instance.new("%s")\n', obj.ClassName)
+            codigo = codigo .. string.format('script.Name = "%s"\n', obj.Name)
+            codigo = codigo .. string.format('script.Source = [[%s]]\n', obj.Source:gsub("]]", "] ]"))
+            codigo = codigo .. string.format('script.Parent = etbonito\n\n')
+        end
+    end
+    
+    return codigo
 end
 
--- =============================================================================
--- SISTEMA VELOCIDADE
--- =============================================================================
+-- Função para exportar partes
+local function exportarPartesEtbonito()
+    local sucesso, pasta = verificarPastaEtbonito()
+    if not sucesso then
+        return pasta
+    end
+    
+    local codigo = "-- PARTES da pasta etbonito\n"
+    codigo = codigo .. "-- Gerado por Etbonito Exportador\n\n"
+    
+    codigo = codigo .. "local etbonito = Instance.new(\"Folder\")\n"
+    codigo = codigo .. "etbonito.Name = \"etbonito\"\n"
+    codigo = codigo .. "etbonito.Parent = workspace\n\n"
+    
+    for _, obj in ipairs(pasta:GetDescendants()) do
+        if obj:IsA("Part") then
+            codigo = codigo .. string.format('local %s = Instance.new("Part")\n', obj.Name)
+            codigo = codigo .. string.format('%s.Name = "%s"\n', obj.Name, obj.Name)
+            codigo = codigo .. string.format('%s.Size = Vector3.new(%s, %s, %s)\n', obj.Name, 
+                tostring(obj.Size.X), tostring(obj.Size.Y), tostring(obj.Size.Z))
+            codigo = codigo .. string.format('%s.Position = Vector3.new(%s, %s, %s)\n', obj.Name,
+                tostring(obj.Position.X), tostring(obj.Position.Y), tostring(obj.Position.Z))
+            codigo = codigo .. string.format('%s.Color = Color3.fromRGB(%d, %d, %d)\n', obj.Name,
+                math.floor(obj.Color.R * 255), math.floor(obj.Color.G * 255), math.floor(obj.Color.B * 255))
+            codigo = codigo .. string.format('%s.Material = Enum.Material.%s\n', obj.Name, obj.Material.Name)
+            codigo = codigo .. string.format('%s.Anchored = true\n', obj.Name)
+            codigo = codigo .. string.format('%s.Parent = etbonito\n\n', obj.Name)
+        end
+    end
+    
+    return codigo
+end
 
-local function toggleSpeed()
-    if lp.Character and lp.Character:FindFirstChild("Humanoid") then
-        if estados.speed then
-            lp.Character.Humanoid.WalkSpeed = 30
+-- Função para criar interface
+local function criarInterface()
+    if gui:FindFirstChild("PainelEtbonito") then
+        guui.PainelEtbonito:Destroy()
+    end
+    
+    -- Frame principal
+    local frame = Instance.new("Frame")
+    frame.Name = "PainelEtbonito"
+    frame.Size = UDim2.new(0, 380, 0, 420)
+    frame.Position = UDim2.new(0.5, -190, 0.5, -210)
+    frame.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
+    frame.BorderSizePixel = 0
+    frame.Parent = gui
+
+    local frameCorner = Instance.new("UICorner")
+    frameCorner.CornerRadius = UDim.new(0, 10)
+    frameCorner.Parent = frame
+
+    -- Header
+    local header = Instance.new("Frame")
+    header.Size = UDim2.new(1, 0, 0, 60)
+    header.Position = UDim2.new(0, 0, 0, 0)
+    header.BackgroundColor3 = Color3.fromRGB(0, 120, 220)
+    header.BorderSizePixel = 0
+    header.Parent = frame
+
+    local headerCorner = Instance.new("UICorner")
+    headerCorner.CornerRadius = UDim.new(0, 10)
+    headerCorner.Parent = header
+
+    -- Logo
+    local logo = Instance.new("ImageLabel")
+    logo.Size = UDim2.new(0, 40, 0, 40)
+    logo.Position = UDim2.new(0, 10, 0, 10)
+    logo.Image = "rbxassetid://81739893945719"
+    logo.BackgroundTransparency = 1
+    logo.Parent = header
+
+    -- Título
+    local titulo = Instance.new("TextLabel")
+    titulo.Size = UDim2.new(1, -60, 0, 30)
+    titulo.Position = UDim2.new(0, 60, 0, 8)
+    titulo.Text = "ETBONITO EXPORT"
+    titulo.Font = Enum.Font.SourceSansBold
+    titulo.TextSize = 16
+    titulo.TextColor3 = Color3.fromRGB(255, 255, 255)
+    titulo.BackgroundTransparency = 1
+    titulo.TextXAlignment = Enum.TextXAlignment.Left
+    titulo.Parent = header
+
+    local subtitulo = Instance.new("TextLabel")
+    subtitulo.Size = UDim2.new(1, -60, 0, 20)
+    subtitulo.Position = UDim2.new(0, 60, 0, 35)
+    subtitulo.Text = "Use pasta 'etbonito' no workspace"
+    subtitulo.Font = Enum.Font.SourceSans
+    subtitulo.TextSize = 12
+    subtitulo.TextColor3 = Color3.fromRGB(220, 240, 255)
+    subtitulo.BackgroundTransparency = 1
+    subtitulo.TextXAlignment = Enum.TextXAlignment.Left
+    subtitulo.Parent = header
+
+    -- Área de conteúdo
+    local contentFrame = Instance.new("Frame")
+    contentFrame.Size = UDim2.new(1, -20, 1, -80)
+    contentFrame.Position = UDim2.new(0, 10, 0, 70)
+    contentFrame.BackgroundTransparency = 1
+    contentFrame.Parent = frame
+
+    -- Caixa de texto
+    local textboxContainer = Instance.new("Frame")
+    textboxContainer.Size = UDim2.new(1, 0, 0, 140)
+    textboxContainer.Position = UDim2.new(0, 0, 0, 0)
+    textboxContainer.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+    textboxContainer.BorderSizePixel = 0
+    textboxContainer.Parent = contentFrame
+
+    local textboxCorner = Instance.new("UICorner")
+    textboxCorner.CornerRadius = UDim.new(0, 6)
+    textboxCorner.Parent = textboxContainer
+
+    local textbox = Instance.new("TextBox")
+    textbox.Name = "ExportBox"
+    textbox.Size = UDim2.new(1, -10, 1, -10)
+    textbox.Position = UDim2.new(0, 5, 0, 5)
+    textbox.TextWrapped = true
+    textbox.TextXAlignment = Enum.TextXAlignment.Left
+    textbox.TextYAlignment = Enum.TextYAlignment.Top
+    textbox.ClearTextOnFocus = false
+    textbox.MultiLine = true
+    textbox.Font = Enum.Font.SourceSans
+    textbox.TextSize = 11
+    textbox.Text = "Coloque seus objetos na pasta 'etbonito' do workspace"
+    textbox.BackgroundTransparency = 1
+    textbox.TextColor3 = Color3.fromRGB(255, 255, 255)
+    textbox.Parent = textboxContainer
+
+    -- Botões
+    local buttonGrid = Instance.new("Frame")
+    buttonGrid.Size = UDim2.new(1, 0, 0, 120)
+    buttonGrid.Position = UDim2.new(0, 0, 0, 150)
+    buttonGrid.BackgroundTransparency = 1
+    buttonGrid.Parent = contentFrame
+
+    -- Função para criar botões
+    local function criarBotao(nome, texto, cor, posicao, tamanho)
+        local botao = Instance.new("TextButton")
+        botao.Name = nome
+        botao.Size = tamanho
+        botao.Position = posicao
+        botao.Text = texto
+        botao.Font = Enum.Font.SourceSansBold
+        botao.TextSize = 12
+        botao.BackgroundColor3 = cor
+        botao.TextColor3 = Color3.fromRGB(255, 255, 255)
+        botao.BorderSizePixel = 0
+        botao.AutoButtonColor = true
+        botao.Parent = buttonGrid
+
+        local botaoCorner = Instance.new("UICorner")
+        botaoCorner.CornerRadius = UDim.new(0, 5)
+        botaoCorner.Parent = botao
+
+        return botao
+    end
+
+    -- Botões principais
+    local exportTudoBtn = criarBotao("ExportTudo", "🌎 EXPORTAR TUDO", Color3.fromRGB(0, 170, 255), 
+        UDim2.new(0, 0, 0, 0), UDim2.new(0.48, -5, 0, 30))
+
+    local exportPartesBtn = criarBotao("ExportPartes", "🧱 PARTES", Color3.fromRGB(0, 120, 200), 
+        UDim2.new(0.5, 0, 0, 0), UDim2.new(0.48, 0, 0, 30))
+
+    local exportScriptsBtn = criarBotao("ExportScripts", "📜 SCRIPTS", Color3.fromRGB(140, 100, 255), 
+        UDim2.new(0, 0, 0, 40), UDim2.new(0.48, -5, 0, 30))
+
+    local salvarArquivoBtn = criarBotao("SalvarArquivo", "💾 SALVAR", Color3.fromRGB(0, 180, 0), 
+        UDim2.new(0.5, 0, 0, 40), UDim2.new(0.48, 0, 0, 30))
+
+    local limparBtn = criarBotao("Limpar", "🔄 LIMPAR", Color3.fromRGB(255, 170, 0), 
+        UDim2.new(0, 0, 0, 80), UDim2.new(0.48, -5, 0, 30))
+
+    local criarPastaBtn = criarBotao("CriarPasta", "📁 CRIAR PASTA", Color3.fromRGB(255, 100, 0), 
+        UDim2.new(0.5, 0, 0, 80), UDim2.new(0.48, 0, 0, 30))
+
+    -- Botão fechar
+    local fecharButton = Instance.new("TextButton")
+    fecharButton.Size = UDim2.new(0, 30, 0, 30)
+    fecharButton.Position = UDim2.new(1, -35, 0, 15)
+    fecharButton.Text = "X"
+    fecharButton.Font = Enum.Font.SourceSansBold
+    fecharButton.TextSize = 14
+    fecharButton.BackgroundColor3 = Color3.fromRGB(220, 60, 60)
+    fecharButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    fecharButton.BorderSizePixel = 0
+    fecharButton.AutoButtonColor = true
+    fecharButton.Parent = header
+
+    local fecharCorner = Instance.new("UICorner")
+    fecharCorner.CornerRadius = UDim.new(0, 5)
+    fecharCorner.Parent = fecharButton
+
+    -- Conexões dos botões
+    exportTudoBtn.MouseButton1Click:Connect(function()
+        local codigo = exportarTudoEtbonito()
+        textbox.Text = codigo
+        if setclipboard then 
+            setclipboard(codigo)
+        end
+    end)
+
+    exportPartesBtn.MouseButton1Click:Connect(function()
+        local codigo = exportarPartesEtbonito()
+        textbox.Text = codigo
+        if setclipboard then 
+            setclipboard(codigo)
+        end
+    end)
+
+    exportScriptsBtn.MouseButton1Click:Connect(function()
+        local codigo = exportarScriptsEtbonito()
+        textbox.Text = codigo
+        if setclipboard then 
+            setclipboard(codigo)
+        end
+    end)
+
+    salvarArquivoBtn.MouseButton1Click:Connect(function()
+        if not writefile then
+            textbox.Text = "Erro: writefile não disponível"
+            return
+        end
+
+        local nomeArquivo = "etbonito_export_" .. os.time() .. ".lua"
+        writefile(nomeArquivo, textbox.Text)
+        textbox.Text = "✅ Arquivo salvo: " .. nomeArquivo .. "\n\n" .. textbox.Text
+    end)
+
+    criarPastaBtn.MouseButton1Click:Connect(function()
+        local pasta = workspace:FindFirstChild("etbonito")
+        if not pasta then
+            pasta = Instance.new("Folder")
+            pasta.Name = "etbonito"
+            pasta.Parent = workspace
+            textbox.Text = "✅ Pasta 'etbonito' criada!\nColoque seus objetos nela."
         else
-            lp.Character.Humanoid.WalkSpeed = 16
+            textbox.Text = "✅ Pasta 'etbonito' já existe!"
         end
-    end
+    end)
+
+    limparBtn.MouseButton1Click:Connect(function()
+        textbox.Text = "Coloque seus objetos na pasta 'etbonito' do workspace"
+    end)
+
+    fecharButton.MouseButton1Click:Connect(function()
+        frame:Destroy()
+    end)
 end
 
--- =============================================================================
--- SISTEMA NO CLIP
--- =============================================================================
-
-local function toggleNoClip()
-    if estados.noclip then
-        conexoes.noclip = RunService.Stepped:Connect(function()
-            if lp.Character then
-                for _, part in pairs(lp.Character:GetDescendants()) do
-                    if part:IsA("BasePart") then
-                        part.CanCollide = false
-                    end
-                end
-            end
-        end)
-    else
-        if conexoes.noclip then
-            conexoes.noclip:Disconnect()
-        end
-    end
-end
-
--- =============================================================================
--- FUNÇÕES UTILITÁRIAS
--- =============================================================================
-
-local function encontrarFaca()
-    for _, obj in pairs(workspace:GetDescendants()) do
-        if obj:IsA("Tool") and (string.lower(obj.Name):find("knife") or string.lower(obj.Name):find("faca")) then
-            if lp.Character and lp.Character:FindFirstChild("HumanoidRootPart") then
-                lp.Character.HumanoidRootPart.CFrame = obj.Handle.CFrame + Vector3.new(0, 3, 0)
-                print("🗡️ Faca encontrada!")
-                return
-            end
-        end
-    end
-    print("❌ Nenhuma faca encontrada")
-end
-
-local function encontrarArma()
-    for _, obj in pairs(workspace:GetDescendants()) do
-        if obj:IsA("Tool") and (string.lower(obj.Name):find("gun") or string.lower(obj.Name):find("revolver")) then
-            if lp.Character and lp.Character:FindFirstChild("HumanoidRootPart") then
-                lp.Character.HumanoidRootPart.CFrame = obj.Handle.CFrame + Vector3.new(0, 3, 0)
-                print("🔫 Arma encontrada!")
-                return
-            end
-        end
-    end
-    print("❌ Nenhuma arma encontrada")
-end
-
-local function teleportSpawn()
-    if lp.Character and lp.Character:FindFirstChild("HumanoidRootPart") then
-        lp.Character.HumanoidRootPart.CFrame = CFrame.new(0, 5, 0)
-        print("🎯 Teleportado para spawn")
-    end
-end
-
-local function verInfo()
-    print("=== INFO MM2 ===")
-    for _, player in pairs(Players:GetPlayers()) do
-        local papel = getPlayerRole(player)
-        print(player.Name .. " - " .. papel)
-    end
-end
-
--- =============================================================================
--- CRIAR BOTÕES
--- =============================================================================
-
-local yPos = 5
-
--- Radar
-local btnRadar = criarBotao("🔴 Radar OFF", UDim2.new(0, 5, 0, yPos), function()
-    estados.radar = not estados.radar
-    btnRadar.Text = estados.radar and "🟢 Radar ON" or "🔴 Radar OFF"
-    btnRadar.BackgroundColor3 = estados.radar and Color3.fromRGB(0, 150, 0) or Color3.fromRGB(150, 0, 0)
-    print("📡 Radar " .. (estados.radar and "ATIVADO" or "DESATIVADO"))
-end, Color3.fromRGB(150, 0, 0))
-yPos = yPos + 40
-
--- Velocidade
-local btnSpeed = criarBotao("🏃‍♂️ Velocidade OFF", UDim2.new(0, 5, 0, yPos), function()
-    estados.speed = not estados.speed
-    btnSpeed.Text = estados.speed and "🏃‍♂️ Velocidade ON" or "🏃‍♂️ Velocidade OFF"
-    btnSpeed.BackgroundColor3 = estados.speed and Color3.fromRGB(0, 150, 0) or Color3.fromRGB(150, 0, 0)
-    toggleSpeed()
-    print("🏃‍♂️ Velocidade " .. (estados.speed and "30" or "16"))
-end, Color3.fromRGB(0, 100, 150))
-yPos = yPos + 40
-
--- ESP
-local btnESP = criarBotao("👁️ ESP OFF", UDim2.new(0, 5, 0, yPos), function()
-    estados.esp = not estados.esp
-    btnESP.Text = estados.esp and "👁️ ESP ON" or "👁️ ESP OFF"
-    btnESP.BackgroundColor3 = estados.esp and Color3.fromRGB(0, 150, 0) or Color3.fromRGB(150, 0, 0)
-    toggleESP()
-    print("👁️ ESP " .. (estados.esp and "ATIVADO" or "DESATIVADO"))
-end, Color3.fromRGB(150, 100, 0))
-yPos = yPos + 40
-
--- No Clip
-local btnNoClip = criarBotao("🚫 NoClip OFF", UDim2.new(0, 5, 0, yPos), function()
-    estados.noclip = not estados.noclip
-    btnNoClip.Text = estados.noclip and "🚫 NoClip ON" or "🚫 NoClip OFF"
-    btnNoClip.BackgroundColor3 = estados.noclip and Color3.fromRGB(0, 150, 0) or Color3.fromRGB(150, 0, 0)
-    toggleNoClip()
-    print("🚫 NoClip " .. (estados.noclip and "ATIVADO" or "DESATIVADO"))
-end, Color3.fromRGB(100, 0, 150))
-yPos = yPos + 40
-
--- Encontrar Faca
-criarBotao("🗡️ Encontrar Faca", UDim2.new(0, 5, 0, yPos), encontrarFaca, Color3.fromRGB(200, 0, 0))
-yPos = yPos + 40
-
--- Encontrar Arma
-criarBotao("🔫 Encontrar Arma", UDim2.new(0, 5, 0, yPos), encontrarArma, Color3.fromRGB(0, 0, 200))
-yPos = yPos + 40
-
--- Teleport Spawn
-criarBotao("🎯 TP Spawn", UDim2.new(0, 5, 0, yPos), teleportSpawn, Color3.fromRGB(200, 200, 0))
-yPos = yPos + 40
-
--- Info
-criarBotao("📊 Info Jogadores", UDim2.new(0, 5, 0, yPos), verInfo, Color3.fromRGB(0, 150, 150))
-
--- =============================================================================
--- CONTROLES DA INTERFACE
--- =============================================================================
-
--- Botão toggle
-toggleBtn.MouseButton1Click:Connect(function()
-    mainFrame.Visible = not mainFrame.Visible
-    toggleBtn.Text = mainFrame.Visible and "🎯 FECHAR MENU" or "🎯 ABRIR MENU"
+-- Conectar botão de abrir
+abrirButton.MouseButton1Click:Connect(function()
+    criarInterface()
 end)
 
--- Botão fechar
-closeBtn.MouseButton1Click:Connect(function()
-    mainFrame.Visible = false
-    toggleBtn.Text = "🎯 ABRIR MENU"
-end)
-
--- =============================================================================
--- LOOP PRINCIPAL
--- =============================================================================
-
--- Loop do radar
-spawn(function()
-    while true do
-        if estados.radar then
-            atualizarRadar()
-        end
-        wait(1)
-    end
-end)
-
--- Loop do ESP
-spawn(function()
-    while true do
-        if estados.esp then
-            -- Atualizar ESP para novos jogadores
-            for _, player in pairs(Players:GetPlayers()) do
-                if player ~= lp and player.Character and not highlights[player.Character] then
-                    toggleESP()
-                end
-            end
-        end
-        wait(2)
-    end
-end)
-
--- Reconectar ao respawnar
-lp.CharacterAdded:Connect(function(character)
-    wait(3)
-    if estados.speed and character:FindFirstChild("Humanoid") then
-        character.Humanoid.WalkSpeed = 30
-    end
-end)
-
-print("🎮 MM2 SCRIPT CARREGADO!")
-print("✅ Clique em 'ABRIR MENU' para começar!")
-print("🚀 8 Funcionalidades testadas!")
+print("✅ Exportador Etbonito carregado! Clique no ET para abrir.")
