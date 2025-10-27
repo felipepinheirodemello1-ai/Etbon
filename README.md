@@ -5,187 +5,140 @@ gui.Name = "ExportadorEtbonito"
 gui.ResetOnSpawn = false
 gui.Parent = player:WaitForChild("PlayerGui")
 
--- Botão fixo para abrir a interface
-local abrirButton = Instance.new("ImageButton")
-abrirButton.Name = "AbrirEtbonito"
-abrirButton.Size = UDim2.new(0, 50, 0, 50)
-abrirButton.Position = UDim2.new(0, 10, 0, 10)
-abrirButton.Image = "rbxassetid://81739893945719"
-abrirButton.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
-abrirButton.Parent = gui
+-- Botão principal
+local abrirBtn = Instance.new("ImageButton")
+abrirBtn.Name = "AbrirEtbonito"
+abrirBtn.Size = UDim2.new(0, 50, 0, 50)
+abrirBtn.Position = UDim2.new(0, 20, 0, 20)
+abrirBtn.Image = "rbxassetid://81739893945719"
+abrirBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 255)
+abrirBtn.Parent = gui
 
+-- Estilização do botão
 local abrirCorner = Instance.new("UICorner")
-abrirCorner.CornerRadius = UDim.new(0, 8)
-abrirCorner.Parent = abrirButton
+abrirCorner.CornerRadius = UDim.new(0, 10)
+abrirCorner.Parent = abrirBtn
 
--- Função para verificar pasta etbonito
-local function verificarPastaEtbonito()
+local abrirStroke = Instance.new("UIStroke")
+abrirStroke.Color = Color3.fromRGB(255, 255, 255)
+abrirStroke.Thickness = 1.5
+abrirStroke.Parent = abrirBtn
+
+-- Efeito hover
+abrirBtn.MouseEnter:Connect(function()
+    abrirBtn.BackgroundColor3 = Color3.fromRGB(0, 180, 255)
+end)
+abrirBtn.MouseLeave:Connect(function()
+    abrirBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 255)
+end)
+
+-- Funções principais
+local function criarPastaEtbonito()
     local pasta = workspace:FindFirstChild("etbonito")
     if not pasta then
-        return false, "❌ Crie uma pasta 'etbonito' no workspace!"
+        pasta = Instance.new("Folder")
+        pasta.Name = "etbonito"
+        pasta.Parent = workspace
+        return true, "✅ PASTA CRIADA"
     end
-    return true, pasta
+    return false, "📁 PASTA JA EXISTE"
 end
 
--- Função para exportar objetos
-local function exportarObjeto(obj, nivel)
+local function escaparString(texto)
+    if not texto then return "" end
+    return texto:gsub("\\", "\\\\"):gsub('"', '\\"'):gsub("\n", "\\n"):gsub("\t", "\\t")
+end
+
+local function exportarObjeto(obj, nivel, parentName)
     local indentacao = string.rep("    ", nivel)
     local codigo = ""
+    local nomeVar = obj.Name:gsub("[^%w]", "_")
     
     if obj:IsA("Folder") then
-        codigo = codigo .. indentacao .. string.format('local %s = Instance.new("Folder")', obj.Name)
-        codigo = codigo .. "\n" .. indentacao .. string.format('%s.Name = "%s"', obj.Name, obj.Name)
-        
+        codigo = codigo .. indentacao .. string.format('local %s = Instance.new("Folder")', nomeVar)
+        codigo = codigo .. "\n" .. indentacao .. string.format('%s.Name = "%s"', nomeVar, escaparString(obj.Name))
         for _, filho in ipairs(obj:GetChildren()) do
-            codigo = codigo .. "\n\n" .. exportarObjeto(filho, nivel)
+            codigo = codigo .. "\n\n" .. exportarObjeto(filho, nivel, nomeVar)
         end
-        
-        codigo = codigo .. "\n" .. indentacao .. string.format('%s.Parent = %s', obj.Name, nivel == 0 and "etbonito" or "p")
-        
+        codigo = codigo .. "\n" .. indentacao .. string.format('%s.Parent = %s', nomeVar, parentName or "workspace")
     elseif obj:IsA("Part") then
-        codigo = codigo .. indentacao .. string.format('local %s = Instance.new("Part")', obj.Name)
-        codigo = codigo .. "\n" .. indentacao .. string.format('%s.Name = "%s"', obj.Name, obj.Name)
-        codigo = codigo .. "\n" .. indentacao .. string.format('%s.Size = Vector3.new(%s, %s, %s)', obj.Name, 
-            tostring(obj.Size.X), tostring(obj.Size.Y), tostring(obj.Size.Z))
-        codigo = codigo .. "\n" .. indentacao .. string.format('%s.Position = Vector3.new(%s, %s, %s)', obj.Name,
-            tostring(obj.Position.X), tostring(obj.Position.Y), tostring(obj.Position.Z))
-        codigo = codigo .. "\n" .. indentacao .. string.format('%s.Color = Color3.fromRGB(%d, %d, %d)', obj.Name,
-            math.floor(obj.Color.R * 255), math.floor(obj.Color.G * 255), math.floor(obj.Color.B * 255))
-        codigo = codigo .. "\n" .. indentacao .. string.format('%s.Material = Enum.Material.%s', obj.Name, obj.Material.Name)
-        codigo = codigo .. "\n" .. indentacao .. string.format('%s.Transparency = %s', obj.Name, tostring(obj.Transparency))
-        codigo = codigo .. "\n" .. indentacao .. string.format('%s.CanCollide = %s', obj.Name, tostring(obj.CanCollide))
-        codigo = codigo .. "\n" .. indentacao .. string.format('%s.Anchored = %s', obj.Name, tostring(obj.Anchored))
-        codigo = codigo .. "\n" .. indentacao .. string.format('%s.Parent = %s', obj.Name, nivel == 0 and "etbonito" or "p")
-        
-    elseif obj:IsA("Script") or obj:IsA("LocalScript") then
-        codigo = codigo .. indentacao .. string.format('local %s = Instance.new("%s")', obj.Name, obj.ClassName)
-        codigo = codigo .. "\n" .. indentacao .. string.format('%s.Name = "%s"', obj.Name, obj.Name)
-        codigo = codigo .. "\n" .. indentacao .. string.format('%s.Source = [[%s]]', obj.Name, obj.Source:gsub("]]", "] ]"))
-        codigo = codigo .. "\n" .. indentacao .. string.format('%s.Parent = p', obj.Name)
-        
-    elseif obj:IsA("SpecialMesh") then
-        codigo = codigo .. indentacao .. string.format('local %s = Instance.new("SpecialMesh")', obj.Name)
-        codigo = codigo .. "\n" .. indentacao .. string.format('%s.Name = "%s"', obj.Name, obj.Name)
-        codigo = codigo .. "\n" .. indentacao .. string.format('%s.MeshId = "%s"', obj.Name, obj.MeshId)
-        codigo = codigo .. "\n" .. indentacao .. string.format('%s.TextureId = "%s"', obj.Name, obj.TextureId)
-        codigo = codigo .. "\n" .. indentacao .. string.format('%s.Scale = Vector3.new(%s, %s, %s)', obj.Name,
-            tostring(obj.Scale.X), tostring(obj.Scale.Y), tostring(obj.Scale.Z))
-        codigo = codigo .. "\n" .. indentacao .. string.format('%s.Parent = p', obj.Name)
-        
+        codigo = codigo .. indentacao .. string.format('local %s = Instance.new("Part")', nomeVar)
+        codigo = codigo .. "\n" .. indentacao .. string.format('%s.Name = "%s"', nomeVar, escaparString(obj.Name))
+        codigo = codigo .. "\n" .. indentacao .. string.format('%s.Size = Vector3.new(%s, %s, %s)', nomeVar, obj.Size.X, obj.Size.Y, obj.Size.Z)
+        codigo = codigo .. "\n" .. indentacao .. string.format('%s.Position = Vector3.new(%s, %s, %s)', nomeVar, obj.Position.X, obj.Position.Y, obj.Position.Z)
+        codigo = codigo .. "\n" .. indentacao .. string.format('%s.Color = Color3.fromRGB(%d, %d, %d)', nomeVar, math.floor(obj.Color.R * 255), math.floor(obj.Color.G * 255), math.floor(obj.Color.B * 255))
+        codigo = codigo .. "\n" .. indentacao .. string.format('%s.Material = Enum.Material.%s', nomeVar, obj.Material.Name)
+        codigo = codigo .. "\n" .. indentacao .. string.format('%s.Anchored = %s', nomeVar, obj.Anchored)
+        for _, filho in ipairs(obj:GetChildren()) do
+            codigo = codigo .. "\n\n" .. exportarObjeto(filho, nivel + 1, nomeVar)
+        end
+        codigo = codigo .. "\n" .. indentacao .. string.format('%s.Parent = %s', nomeVar, parentName or "workspace")
+    elseif obj:IsA("Model") then
+        codigo = codigo .. indentacao .. string.format('local %s = Instance.new("Model")', nomeVar)
+        codigo = codigo .. "\n" .. indentacao .. string.format('%s.Name = "%s"', nomeVar, escaparString(obj.Name))
+        for _, filho in ipairs(obj:GetChildren()) do
+            codigo = codigo .. "\n\n" .. exportarObjeto(filho, nivel + 1, nomeVar)
+        end
+        codigo = codigo .. "\n" .. indentacao .. string.format('%s.Parent = %s', nomeVar, parentName or "workspace")
     else
-        codigo = codigo .. indentacao .. string.format('local %s = Instance.new("%s")', obj.Name, obj.ClassName)
-        codigo = codigo .. "\n" .. indentacao .. string.format('%s.Name = "%s"', obj.Name, obj.Name)
-        codigo = codigo .. "\n" .. indentacao .. string.format('%s.Parent = p', obj.Name)
+        codigo = codigo .. indentacao .. string.format('local %s = Instance.new("%s")', nomeVar, obj.ClassName)
+        codigo = codigo .. "\n" .. indentacao .. string.format('%s.Name = "%s"', nomeVar, escaparString(obj.Name))
+        codigo = codigo .. "\n" .. indentacao .. string.format('%s.Parent = %s', nomeVar, parentName or "workspace")
     end
-    
     return codigo
 end
 
--- Função para exportar tudo
-local function exportarTudoEtbonito()
-    local sucesso, pasta = verificarPastaEtbonito()
-    if not sucesso then
-        return pasta
+local function exportarTudo()
+    local pasta = workspace:FindFirstChild("etbonito")
+    if not pasta then
+        return "❌ CRIE PASTA 'ETBONITO'"
+    end
+    if #pasta:GetChildren() == 0 then
+        return "📁 PASTA VAZIA"
     end
     
-    local codigo = "-- Exportação completa da pasta etbonito\n"
-    codigo = codigo .. "-- Gerado por Etbonito Exportador\n\n"
-    
+    local codigo = "🔥 ETBONITO EXPORT\n"
+    codigo = codigo .. "📅 " .. os.date("%d/%m/%Y %H:%M") .. "\n"
     codigo = codigo .. "local etbonito = Instance.new(\"Folder\")\n"
     codigo = codigo .. "etbonito.Name = \"etbonito\"\n"
     codigo = codigo .. "etbonito.Parent = workspace\n\n"
     
     for _, obj in ipairs(pasta:GetChildren()) do
-        codigo = codigo .. exportarObjeto(obj, 0) .. "\n\n"
-    end
-    
-    return codigo
-end
-
--- Função para exportar scripts
-local function exportarScriptsEtbonito()
-    local sucesso, pasta = verificarPastaEtbonito()
-    if not sucesso then
-        return pasta
-    end
-    
-    local codigo = "-- SCRIPTS da pasta etbonito\n"
-    codigo = codigo .. "-- Gerado por Etbonito Exportador\n\n"
-    
-    codigo = codigo .. "local etbonito = Instance.new(\"Folder\")\n"
-    codigo = codigo .. "etbonito.Name = \"etbonito\"\n"
-    codigo = codigo .. "etbonito.Parent = workspace\n\n"
-    
-    for _, obj in ipairs(pasta:GetDescendants()) do
-        if obj:IsA("Script") or obj:IsA("LocalScript") then
-            codigo = codigo .. string.format('-- Script: %s\n', obj.Name)
-            codigo = codigo .. string.format('local script = Instance.new("%s")\n', obj.ClassName)
-            codigo = codigo .. string.format('script.Name = "%s"\n', obj.Name)
-            codigo = codigo .. string.format('script.Source = [[%s]]\n', obj.Source:gsub("]]", "] ]"))
-            codigo = codigo .. string.format('script.Parent = etbonito\n\n')
+        if not obj:IsA("Script") and not obj:IsA("LocalScript") then
+            codigo = codigo .. exportarObjeto(obj, 0, "etbonito") .. "\n\n"
         end
     end
-    
+    codigo = codigo .. "print('✅ EXPORT CONCLUIDO')\n"
     return codigo
 end
 
--- Função para exportar partes
-local function exportarPartesEtbonito()
-    local sucesso, pasta = verificarPastaEtbonito()
-    if not sucesso then
-        return pasta
-    end
-    
-    local codigo = "-- PARTES da pasta etbonito\n"
-    codigo = codigo .. "-- Gerado por Etbonito Exportador\n\n"
-    
-    codigo = codigo .. "local etbonito = Instance.new(\"Folder\")\n"
-    codigo = codigo .. "etbonito.Name = \"etbonito\"\n"
-    codigo = codigo .. "etbonito.Parent = workspace\n\n"
-    
-    for _, obj in ipairs(pasta:GetDescendants()) do
-        if obj:IsA("Part") then
-            codigo = codigo .. string.format('local %s = Instance.new("Part")\n', obj.Name)
-            codigo = codigo .. string.format('%s.Name = "%s"\n', obj.Name, obj.Name)
-            codigo = codigo .. string.format('%s.Size = Vector3.new(%s, %s, %s)\n', obj.Name, 
-                tostring(obj.Size.X), tostring(obj.Size.Y), tostring(obj.Size.Z))
-            codigo = codigo .. string.format('%s.Position = Vector3.new(%s, %s, %s)\n', obj.Name,
-                tostring(obj.Position.X), tostring(obj.Position.Y), tostring(obj.Position.Z))
-            codigo = codigo .. string.format('%s.Color = Color3.fromRGB(%d, %d, %d)\n', obj.Name,
-                math.floor(obj.Color.R * 255), math.floor(obj.Color.G * 255), math.floor(obj.Color.B * 255))
-            codigo = codigo .. string.format('%s.Material = Enum.Material.%s\n', obj.Name, obj.Material.Name)
-            codigo = codigo .. string.format('%s.Anchored = true\n', obj.Name)
-            codigo = codigo .. string.format('%s.Parent = etbonito\n\n', obj.Name)
-        end
-    end
-    
-    return codigo
-end
-
--- Função para criar interface
+-- Interface principal
 local function criarInterface()
-    if gui:FindFirstChild("PainelEtbonito") then
-        guui.PainelEtbonito:Destroy()
+    if gui:FindFirstChild("PainelPrincipal") then
+        gui.PainelPrincipal:Destroy()
     end
     
-    -- Frame principal
     local frame = Instance.new("Frame")
-    frame.Name = "PainelEtbonito"
-    frame.Size = UDim2.new(0, 380, 0, 420)
-    frame.Position = UDim2.new(0.5, -190, 0.5, -210)
-    frame.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
+    frame.Name = "PainelPrincipal"
+    frame.Size = UDim2.new(0, 350, 0, 300)
+    frame.Position = UDim2.new(0.5, -175, 0.3, -100)
+    frame.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
     frame.BorderSizePixel = 0
     frame.Parent = gui
 
-    local frameCorner = Instance.new("UICorner")
-    frameCorner.CornerRadius = UDim.new(0, 10)
-    frameCorner.Parent = frame
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 10)
+    corner.Parent = frame
+
+    local stroke = Instance.new("UIStroke")
+    stroke.Color = Color3.fromRGB(80, 80, 120)
+    stroke.Thickness = 2
+    stroke.Parent = frame
 
     -- Header
     local header = Instance.new("Frame")
-    header.Size = UDim2.new(1, 0, 0, 60)
-    header.Position = UDim2.new(0, 0, 0, 0)
-    header.BackgroundColor3 = Color3.fromRGB(0, 120, 220)
+    header.Size = UDim2.new(1, 0, 0, 50)
+    header.BackgroundColor3 = Color3.fromRGB(0, 100, 200)
     header.BorderSizePixel = 0
     header.Parent = frame
 
@@ -193,23 +146,199 @@ local function criarInterface()
     headerCorner.CornerRadius = UDim.new(0, 10)
     headerCorner.Parent = header
 
-    -- Logo
+    -- Logo e títulos
     local logo = Instance.new("ImageLabel")
-    logo.Size = UDim2.new(0, 40, 0, 40)
-    logo.Position = UDim2.new(0, 10, 0, 10)
+    logo.Size = UDim2.new(0, 35, 0, 35)
+    logo.Position = UDim2.new(0, 8, 0, 7)
     logo.Image = "rbxassetid://81739893945719"
     logo.BackgroundTransparency = 1
     logo.Parent = header
 
-    -- Título
     local titulo = Instance.new("TextLabel")
-    titulo.Size = UDim2.new(1, -60, 0, 30)
-    titulo.Position = UDim2.new(0, 60, 0, 8)
+    titulo.Size = UDim2.new(1, -50, 1, 0)
+    titulo.Position = UDim2.new(0, 50, 0, 0)
     titulo.Text = "ETBONITO EXPORT"
-    titulo.Font = Enum.Font.SourceSansBold
-    titulo.TextSize = 16
+    titulo.Font = Enum.Font.GothamBold
+    titulo.TextSize = 14
     titulo.TextColor3 = Color3.fromRGB(255, 255, 255)
     titulo.BackgroundTransparency = 1
+    titulo.TextXAlignment = Enum.TextXAlignment.Left
+    titulo.Parent = header
+
+    -- Área de conteúdo
+    local contentFrame = Instance.new("Frame")
+    contentFrame.Size = UDim2.new(1, -10, 1, -60)
+    contentFrame.Position = UDim2.new(0, 5, 0, 55)
+    contentFrame.BackgroundTransparency = 1
+    contentFrame.Parent = frame
+
+    -- Caixa de texto
+    local textboxContainer = Instance.new("Frame")
+    textboxContainer.Size = UDim2.new(1, 0, 0, 150)
+    textboxContainer.Position = UDim2.new(0, 0, 0, 0)
+    textboxContainer.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
+    textboxContainer.BorderSizePixel = 0
+    textboxContainer.Parent = contentFrame
+
+    local textboxCorner = Instance.new("UICorner")
+    textboxCorner.CornerRadius = UDim.new(0, 8)
+    textboxCorner.Parent = textboxContainer
+
+    local textbox = Instance.new("TextBox")
+    textbox.Name = "ExportBox"
+    textbox.Size = UDim2.new(1, -10, 1, -10)
+    textbox.Position = UDim2.new(0, 5, 0, 5)
+    textbox.TextWrapped = true
+    textbox.TextXAlignment = Enum.TextXAlignment.Left
+    textbox.TextYAlignment = Enum.TextYAlignment.Top
+    textbox.MultiLine = true
+    textbox.Font = Enum.Font.Gotham
+    textbox.TextSize = 10
+    textbox.Text = "📁 SPLASH\n• Voltar para Crescendo\n• Rotar\n• Collarem\n\n📜 SCRIPTS SERVIDOR\n• Tagé\n• ck\n\n⚡ INFINITE YIELD\n• ETIBONISO EXPORT\n• Interface levantado\n• Scripts em manutencao"
+    textbox.BackgroundTransparency = 1
+    textbox.TextColor3 = Color3.fromRGB(240, 240, 255)
+    textbox.Parent = textboxContainer
+
+    -- Botões
+    local buttonGrid = Instance.new("Frame")
+    buttonGrid.Size = UDim2.new(1, 0, 0, 80)
+    buttonGrid.Position = UDim2.new(0, 0, 0, 160)
+    buttonGrid.BackgroundTransparency = 1
+    buttonGrid.Parent = contentFrame
+
+    local function criarBotao(nome, texto, cor, posicao, tamanho)
+        local botao = Instance.new("TextButton")
+        botao.Name = nome
+        botao.Size = tamanho
+        botao.Position = posicao
+        botao.Text = texto
+        botao.Font = Enum.Font.GothamBold
+        botao.TextSize = 11
+        botao.BackgroundColor3 = cor
+        botao.TextColor3 = Color3.fromRGB(255, 255, 255)
+        botao.BorderSizePixel = 0
+        botao.AutoButtonColor = true
+        botao.Parent = buttonGrid
+
+        local botaoCorner = Instance.new("UICorner")
+        botaoCorner.CornerRadius = UDim.new(0, 6)
+        botaoCorner.Parent = botao
+
+        botao.MouseEnter:Connect(function()
+            botao.BackgroundColor3 = Color3.new(cor.R + 0.1, cor.G + 0.1, cor.B + 0.1)
+        end)
+        botao.MouseLeave:Connect(function()
+            botao.BackgroundColor3 = cor
+        end)
+
+        return botao
+    end
+
+    -- Botões compactos - 4 botões em 2 linhas
+    local criarPastaBtn = criarBotao("CriarPasta", "📁 CRIAR", Color3.fromRGB(255, 120, 0), 
+        UDim2.new(0, 0, 0, 0), UDim2.new(0.48, -2, 0, 35))
+
+    local exportTudoBtn = criarBotao("ExportTudo", "🚀 EXPORTAR", Color3.fromRGB(0, 150, 255), 
+        UDim2.new(0.52, 0, 0, 0), UDim2.new(0.48, 0, 0, 35))
+
+    -- NOVO BOTÃO: COMO USAR
+    local comoUsarBtn = criarBotao("ComoUsar", "❓ COMO USAR", Color3.fromRGB(100, 180, 100), 
+        UDim2.new(0, 0, 0, 40), UDim2.new(0.48, -2, 0, 35))
+
+    -- Botão scripts (desativado)
+    local scriptsBtn = criarBotao("ScriptsBtn", "📜 MANUTENCAO", Color3.fromRGB(80, 80, 80), 
+        UDim2.new(0.52, 0, 0, 40), UDim2.new(0.48, 0, 0, 35))
+    scriptsBtn.AutoButtonColor = false
+    scriptsBtn.TextColor3 = Color3.fromRGB(180, 180, 180)
+
+    -- Botão fechar
+    local fecharBtn = Instance.new("TextButton")
+    fecharBtn.Size = UDim2.new(0, 25, 0, 25)
+    fecharBtn.Position = UDim2.new(1, -30, 0, 12)
+    fecharBtn.Text = "✕"
+    fecharBtn.Font = Enum.Font.GothamBold
+    fecharBtn.TextSize = 12
+    fecharBtn.BackgroundColor3 = Color3.fromRGB(220, 60, 60)
+    fecharBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    fecharBtn.BorderSizePixel = 0
+    fecharBtn.AutoButtonColor = true
+    fecharBtn.Parent = header
+
+    local fecharCorner = Instance.new("UICorner")
+    fecharCorner.CornerRadius = UDim.new(0, 6)
+    fecharCorner.Parent = fecharBtn
+
+    -- Conexões dos botões
+    criarPastaBtn.MouseButton1Click:Connect(function()
+        local sucesso, mensagem = criarPastaEtbonito()
+        textbox.Text = mensagem
+    end)
+
+    exportTudoBtn.MouseButton1Click:Connect(function()
+        local codigo = exportarTudo()
+        textbox.Text = codigo
+        if setclipboard then setclipboard(codigo) end
+    end)
+
+    -- NOVA FUNÇÃO: COMO USAR
+    comoUsarBtn.MouseButton1Click:Connect(function()
+        textbox.Text = "🎯 COMO USAR O ETBONITO EXPORT:\n\n" ..
+                       "1️⃣ CLIQUE EM 'CRIAR'\n" ..
+                       "   • Cria pasta 'etbonito' no Workspace\n\n" ..
+                       "2️⃣ COLOQUE OBJETOS\n" ..
+                       "   • Parts, Models, Folders\n" ..
+                       "   • Na pasta 'etbonito'\n\n" ..
+                       "3️⃣ CLIQUE EM 'EXPORTAR'\n" ..
+                       "   • Gera código automaticamente\n" ..
+                       "   • Copia para área de transferência\n\n" ..
+                       "⚠️  SCRIPTS EM MANUTENCAO\n" ..
+                       "• Apenas objetos visuais por enquanto"
+    end)
+
+    scriptsBtn.MouseButton1Click:Connect(function()
+        textbox.Text = "🚧 SCRIPTS EM MANUTENCAO\n\n📁 SPLASH\n• Voltar para Crescendo\n• Rotar\n• Collarem\n• Contar/Appar Grupo\n• Selecionar\n\n📜 SCRIPTS SERVIDOR\n• Tagé\n• ck\n\n⚡ INFINITE YIELD\n• ETIBONISO EXPORT\n• Interface levantado\n• Scripts em manutencao"
+    end)
+
+    fecharBtn.MouseButton1Click:Connect(function()
+        frame:Destroy()
+    end)
+
+    -- Sistema de arrastar
+    local dragging, dragInput, dragStart, startPos = false
+    header.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = true
+            dragStart = input.Position
+            startPos = frame.Position
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then
+                    dragging = false
+                end
+            end)
+        end
+    end)
+
+    header.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement then
+            dragInput = input
+        end
+    end)
+
+    game:GetService("UserInputService").InputChanged:Connect(function(input)
+        if input == dragInput and dragging then
+            local delta = input.Position - dragStart
+            frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+        end
+    end)
+end
+
+-- Conectar botão principal
+abrirBtn.MouseButton1Click:Connect(criarInterface)
+
+print("📁 ETBONITO EXPORT CARREGADO")
+print("⚡ Interface compacta")
+print("❓ Botão 'Como Usar' adicionado")
+print("🚧 Scripts em manutencao")    titulo.BackgroundTransparency = 1
     titulo.TextXAlignment = Enum.TextXAlignment.Left
     titulo.Parent = header
 
